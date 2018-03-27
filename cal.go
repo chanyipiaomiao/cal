@@ -88,9 +88,10 @@ func JulianDate(t time.Time) float32 {
 
 // Calendar represents a yearly calendar with a list of holidays.
 type Calendar struct {
-	holidays [13][]Holiday // 0 for offset based holidays, 1-12 for month based
-	workday  [7]bool       // flags to indicate a day of the week is a workday
-	Observed ObservedRule
+	holidays     [13][]Holiday // 0 for offset based holidays, 1-12 for month based
+	workday      [7]bool       // flags to indicate a day of the week is a workday
+	Observed     ObservedRule
+	extraWorkday []time.Time // 额外的工作日
 }
 
 // NewCalendar creates a new Calendar with no holidays defined
@@ -105,6 +106,8 @@ func NewCalendar() *Calendar {
 	c.workday[time.Wednesday] = true
 	c.workday[time.Thursday] = true
 	c.workday[time.Friday] = true
+
+	c.extraWorkday = []time.Time{}
 	return c
 }
 
@@ -112,6 +115,13 @@ func NewCalendar() *Calendar {
 func (c *Calendar) AddHoliday(h ...Holiday) {
 	for _, hd := range h {
 		c.holidays[hd.Month] = append(c.holidays[hd.Month], hd)
+	}
+}
+
+// AddExtraWorkday 添加额外的工作日
+func (c *Calendar) AddExtraWorkday(t ...time.Time) {
+	for _, v := range t {
+		c.extraWorkday = append(c.extraWorkday, v)
 	}
 }
 
@@ -139,6 +149,11 @@ func (c *Calendar) IsHoliday(date time.Time) bool {
 
 // IsWorkday reports whether a given date is a work day (business day).
 func (c *Calendar) IsWorkday(date time.Time) bool {
+	for _, w := range c.extraWorkday {
+		if w == date {
+			return true
+		}
+	}
 	day := date.Weekday()
 
 	if !c.workday[day] || c.IsHoliday(date) {
